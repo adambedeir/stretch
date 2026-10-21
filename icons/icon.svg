@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#121816"/>
+      <stop offset="1" stop-color="#040405"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.72" cy="0.22" r="0.7">
+      <stop offset="0" stop-color="#7cf0c5" stop-opacity="0.32"/>
+      <stop offset="1" stop-color="#7cf0c5" stop-opacity="0"/>
+    </radialGradient>
+    <style>
+      .fg-near { stroke: #f3f3f6; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+      .fg-far { stroke: #737380; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+      .fg-hl { stroke: #7cf0c5; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+      .fg-glow { stroke: #7cf0c5; opacity: .25; fill: none; stroke-linecap: round; }
+      .fg-gap { stroke: #0c0f0e; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+      .fg-gap-fill { fill: #0c0f0e; }
+      .fg-head { fill: #f3f3f6; }
+      .fg-hl-fill { fill: #7cf0c5; }
+      .fg-glow-fill { fill: #7cf0c5; opacity: .25; }
+    </style>
+  </defs>
+  <rect width="1024" height="1024" fill="url(#bg)"/>
+  <rect width="1024" height="1024" fill="url(#glow)"/>
+  <circle cx="512" cy="512" r="338" fill="#0c0f0e"/>
+  <circle cx="512" cy="512" r="360" fill="none" stroke="#ffffff" stroke-opacity="0.08" stroke-width="40"/>
+  <circle cx="512" cy="512" r="360" fill="none" stroke="#7cf0c5" stroke-width="40" stroke-linecap="round"
+          stroke-dasharray="1583 2262" transform="rotate(-90 512 512)"/>
+  <path d="M318 748H706" stroke="#2b2f2e" stroke-width="7" stroke-linecap="round"/>
+  <g transform="translate(202.4 203.2) scale(3.6)">
+    <path d="M125.7 145.7L134.7 145.7" class="fg-far" stroke-width="6.63"/>
+    <path d="M95 120L125.7 115.7L125.7 145.7" class="fg-far" stroke-width="8.5"/>
+    <path d="M118.9 119.3L124.1 125.4" class="fg-far" stroke-width="5.76"/>
+    <path d="M93.6 79L104.1 101.7L118.9 119.3" class="fg-far" stroke-width="8"/>
+    <path d="M95 120Q94.2 98 93.5 76" class="fg-gap" stroke-width="19"/>
+    <path d="M95 120Q94.2 98 93.5 76" class="fg-near" stroke-width="15"/>
+    <path d="M93.5 76L93.3 71.5" class="fg-near" stroke-width="7"/>
+    <circle cx="93" cy="63.5" r="11.5" class="fg-gap-fill"/>
+    <circle cx="93" cy="63.5" r="9.5" class="fg-head"/>
+    <circle cx="99.8" cy="115.4" r="12" class="fg-glow-fill"/>
+    <circle cx="99.8" cy="115.4" r="6.5" class="fg-hl-fill"/>
+    <path d="M46.8 145.1L37.8 145.1" class="fg-gap" stroke-width="11"/>
+    <path d="M95 120L76.8 145.1L46.8 145.1" class="fg-gap" stroke-width="13"/>
+    <path d="M46.8 145.1L37.8 145.1" class="fg-near" stroke-width="7"/>
+    <path d="M95 120L76.8 145.1" class="fg-glow" stroke-width="18"/>
+    <path d="M95 120L76.8 145.1" class="fg-hl" stroke-width="9"/>
+    <path d="M76.8 145.1L46.8 145.1" class="fg-near" stroke-width="9"/>
+    <path d="M108.1 33.3L110.1 25.6" class="fg-gap" stroke-width="10.1"/>
+    <path d="M93.6 79L102.1 55.5L108.1 33.3" class="fg-gap" stroke-width="12.5"/>
+    <path d="M108.1 33.3L110.1 25.6" class="fg-near" stroke-width="6.1"/>
+    <path d="M93.6 79L102.1 55.5L108.1 33.3" class="fg-near" stroke-width="8.5"/>
+  </g>
+</svg>
