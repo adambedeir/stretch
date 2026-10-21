@@ -2,11 +2,13 @@
 
 A calm, guided stretching app for iPhone and desktop. No build step and no accounts; it's plain HTML, CSS and JavaScript.
 
-- **Today**: your coming-home routine follows your split (Upper → Lower → Push → Pull → Legs). Finish one and the next is ready tomorrow. Shuffle for new stretches; it avoids repeating last time's picks.
+- **Today**: set what you train each day of the week (Upper, Lower, Push, Pull, Legs or rest) and the matching routine is ready when you open the app. Rest days get a random full-body mix. Shuffle for new stretches; it avoids repeating last time's picks.
 - **Quick sessions**: Desk reset (no floor), Wind down (slow floor work before bed), Wrists & forearms.
 - **Body**: tap tight areas on the body map, pick desk/floor and a length, get a routine.
 - **Library**: 62 stretches with animated illustrations, steps, what you should feel, and what to avoid. Star favorites and they come up more often.
-- **Progress**: streak, calendar, minutes per week. History is stored on each device.
+- **Progress**: streak, calendar, minutes per week.
+
+Everything personal (your week, history, favorites, settings) is stored only in the browser on each device. Nothing is sent anywhere, and none of it is in this repo.
 
 ## Install on iPhone
 

@@ -2,7 +2,7 @@
   'use strict';
 
   const { STRETCHES, AREAS, POS, POS_ORDER, byId } = window.LIB;
-  const VERSION = '2.0.0';
+  const VERSION = '2.1.0';
 
   // ───────────────────────── helpers
   const $ = (s, el = document) => el.querySelector(s);
@@ -29,6 +29,7 @@
     log: [], favs: [], recent: {}, plans: {},
     settings: { minutes: 10, holdScale: 1, ready: 5, sound: true, haptics: true },
     body: { sel: [], minutes: 10, where: 'any' },
+    week: null, // { 0..6 (Sun..Sat): routine key } — kept on this device only
     installHidden: false,
   };
   function load() {
@@ -84,7 +85,13 @@
     { key: 'legs', name: 'Legs', title: 'Leg day', tint: '#a8e063', avoidWith: ['lower'],
       slots: ['quads', 'hipflexors', 'hamstrings', 'glutes', 'calves', 'adductors', 'lowerback', 'quads'] },
   ];
-  const SPLIT_KEYS = SPLITS.map(s => s.key);
+  const MIX = { key: 'mix', name: 'Rest', title: 'Rest day mix', tint: '#7cf0c5', shuffle: true,
+    slots: ['hipflexors', 'upperback', 'hamstrings', 'chest', 'glutes', 'neck', 'lowerback', 'wrists', 'quads', 'shoulders', 'adductors', 'calves'] };
+  const DAY_TYPES = [...SPLITS, MIX];
+  const DAY_KEYS = DAY_TYPES.map(s => s.key);
+  const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const DAY_ORDER = [1, 2, 3, 4, 5, 6, 0]; // Monday first
+  const dayType = d => (DB.week && DB.week[d]) || 'mix';
   const QUICK = [
     { key: 'desk', name: 'Desk reset', title: 'Desk reset', sub: 'Neck, wrists and back. No floor needed.', tint: '#ffc861',
       minutes: 4, where: 'desk', holdCap: 30, icon: 'desk-lat',
@@ -101,7 +108,7 @@
     floor: s => s.pos === 'kneel' || s.pos === 'sit' || s.pos === 'lie',
   };
   const SWITCH_SECS = 5;
-  const defByKey = k => SPLITS.find(s => s.key === k) || QUICK.find(q => q.key === k) || (k === 'body' ? bodyDef() : null);
+  const defByKey = k => DAY_TYPES.find(s => s.key === k) || QUICK.find(q => q.key === k) || (k === 'body' ? bodyDef() : null);
 
   function bodyDef() {
     const order = AREAS.map(a => a.key);
@@ -127,10 +134,11 @@
     const favs = new Set(DB.favs);
     const avoid = new Set([...(DB.recent[def.key] || []), ...(extraAvoid || [])]);
     (def.avoidWith || []).forEach(k => (DB.recent[k] || []).forEach(id => avoid.add(id)));
+    const slots = def.shuffle ? def.slots.slice().sort(() => Math.random() - 0.5) : def.slots;
     const items = [];
     let total = 0, i = 0, misses = 0;
-    while (def.slots.length && misses < def.slots.length) {
-      const area = def.slots[i++ % def.slots.length];
+    while (slots.length && misses < slots.length) {
+      const area = slots[i++ % slots.length];
       const cands = pool.filter(s => s.areas.includes(area) && !items.some(it => it.id === s.id));
       if (!cands.length) { misses++; continue; }
       const s = pick(cands, c => (c.areas[0] === area ? 3 : 1) * (avoid.has(c.id) ? 0.15 : 1) * (favs.has(c.id) ? 2.5 : 1));
@@ -176,13 +184,6 @@
   }
 
   // ───────────────────────── history
-  function splitStatus() {
-    const logs = DB.log.filter(l => l.split);
-    const last = logs[logs.length - 1];
-    if (!last) return { next: 'upper', today: null };
-    const i = SPLIT_KEYS.indexOf(last.split);
-    return { next: SPLIT_KEYS[(i + 1) % SPLIT_KEYS.length], today: last.day === dayKey() ? last.split : null };
-  }
   const daysSet = () => new Set(DB.log.map(l => l.day));
   function streak() {
     const days = daysSet();
@@ -285,7 +286,7 @@
   }
 
   // ───────────────────────── views
-  const UI = { tab: 'today', split: null, libFilter: 'all', libQuery: '', calOffset: 0, scroll: {} };
+  const UI = { tab: 'today', day: null, dayStamp: null, libFilter: 'all', libQuery: '', calOffset: 0, scroll: {} };
 
   const isIOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   const standalone = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
@@ -295,15 +296,19 @@
   }
 
   function vToday() {
-    const st = splitStatus();
-    const sel = UI.split || st.today || st.next;
-    const def = SPLITS.find(s => s.key === sel);
+    const todayIdx = new Date().getDay();
+    if (UI.dayStamp !== dayKey()) { UI.day = null; UI.dayStamp = dayKey(); }
+    const selIdx = UI.day == null ? todayIdx : UI.day;
+    const def = defByKey(dayType(selIdx));
     const plan = planFor(def, DB.settings.minutes);
+    const doneToday = DB.log.some(l => l.day === dayKey() && l.key === def.key);
     const date = new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
     const n = streak();
     const right = `<button class="pill-btn streak${n ? ' lit' : ''}" data-act="tab" data-tab="progress" aria-label="${n} day streak">${ICON.flame}<b>${n}</b></button>
       <button class="icon-btn" data-act="settings" aria-label="Settings">${ICON.sliders}</button>`;
-    const eyebrow = sel === st.today ? `${ICON.check} Done today` : sel === st.next ? 'Up next in your split' : 'Coming home';
+    const eyebrow = selIdx !== todayIdx ? DAY_NAMES[selIdx]
+      : doneToday ? `${ICON.check} Done today` : `Today · ${DAY_NAMES[todayIdx]}`;
+    const title = def.key === 'mix' && !DB.week ? 'Full-body mix' : def.title;
     const shown = plan.items.slice(0, 6);
     const more = plan.items.length - shown.length;
 
@@ -314,26 +319,28 @@
 
     const ws = weekStart();
     const days = daysSet();
-    const week = Array.from({ length: 7 }, (_, i) => {
-      const d = new Date(ws); d.setDate(ws.getDate() + i);
-      const k = dayKey(d);
-      const cls = (days.has(k) ? ' done' : '') + (k === dayKey() ? ' now' : '');
-      return `<div class="wk-day${cls}"><span>${'MTWTFSS'[i]}</span><i>${days.has(k) ? ICON.check : ''}</i></div>`;
+    const strip = DAY_ORDER.map((d, i) => {
+      const date = new Date(ws); date.setDate(ws.getDate() + i);
+      const done = days.has(dayKey(date));
+      const t = defByKey(dayType(d));
+      const cls = (d === selIdx ? ' on' : '') + (d === todayIdx ? ' now' : '') + (done ? ' done' : '');
+      return `<button class="day${cls}" style="--tint:${t.tint}" data-act="day" data-d="${d}" aria-pressed="${d === selIdx}"
+        aria-label="${DAY_NAMES[d]}: ${DB.week ? t.name : 'not set'}${done ? ', stretched' : ''}">
+        <span>${DAY_NAMES[d].slice(0, 3)}</span><b>${DB.week ? t.name : '–'}</b><i>${done ? ICON.check : ''}</i></button>`;
     }).join('');
+    const setup = DB.week ? '' : `<button class="setup" data-act="week">
+        <div><b>Set up your gym week</b><span>Pick what you train each day and the matching stretch routine will be waiting when you get home.</span></div>${ICON.chevR}</button>`;
 
     return header('Today', esc(date), right) + install + `
       <section class="sec">
-        <div class="sec-h"><h2>Coming home</h2><span>Your split</span></div>
-        <div class="split-row" role="tablist">${SPLITS.map(s => {
-          const tag = s.key === st.today ? 'Done' : s.key === st.next ? 'Next' : '';
-          return `<button role="tab" aria-selected="${s.key === sel}" class="split-chip${s.key === sel ? ' on' : ''}" style="--tint:${s.tint}" data-act="split" data-key="${s.key}">
-            <span>${s.name}</span><small>${tag}</small></button>`;
-        }).join('')}</div>
+        <div class="sec-h"><h2>Coming home</h2><button class="link" data-act="week">${DB.week ? 'Edit week' : 'Set up'}</button></div>
+        ${setup}
+        <div class="days">${strip}</div>
         <article class="hero" style="--tint:${def.tint}">
           <div class="hero-top">
             <div>
               <div class="hero-eyebrow">${eyebrow}</div>
-              <h3>${def.title}</h3>
+              <h3>${title}</h3>
               <div class="hero-meta">${fmtMin(routineSecs(plan))} · ${plan.items.length} stretches</div>
             </div>
             ${seg('len', DB.settings.minutes, LEN_OPTS, 'aria-label="Length in minutes"')}
@@ -370,11 +377,7 @@
           </article>
         </div>
       </section>
-
-      <section class="sec">
-        <div class="sec-h"><h2>This week</h2><span>${Math.round(weekSecs() / 60)} min</span></div>
-        <div class="week card">${week}</div>
-      </section>`;
+`;
   }
 
   function vBody() {
@@ -612,9 +615,11 @@
         <div class="set"><div><b>Chimes</b><span>Plays through the ringer. Silent mode mutes them.</span></div>${seg('set-sound', st.sound, [{ v: true, l: 'On' }, { v: false, l: 'Off' }])}</div>
         <div class="set"><div><b>Haptics</b><span>Taps on button presses where supported</span></div>${seg('set-haptics', st.haptics, [{ v: true, l: 'On' }, { v: false, l: 'Off' }])}</div>
       </div>
-      <div class="sec-h"><h2>Your split</h2></div>
-      <div class="card split-order">${SPLITS.map((s, i) => `<span style="--tint:${s.tint}">${s.name}</span>${i < SPLITS.length - 1 ? '<i>→</i>' : ''}`).join('')}
-        <p>After you finish a split routine, the next one in this order is ready on the Today screen. Tap any day to switch.</p></div>
+      <div class="sec-h"><h2>Your gym week</h2><button class="link" data-act="week">Edit</button></div>
+      <div class="card week-sum">${DAY_ORDER.map(d => {
+        const t = defByKey(dayType(d));
+        return `<span style="--tint:${t.tint}"><em>${DAY_NAMES[d].slice(0, 3)}</em>${DB.week ? t.name : '–'}</span>`;
+      }).join('')}</div>
       <div class="sec-h"><h2>Data</h2></div>
       <div class="card set-list">
         <div class="set"><div><b>History</b><span>${DB.log.length} sessions, saved only on this device</span></div>
@@ -625,6 +630,22 @@
     settingsEntry = entry;
   }
   let settingsEntry = null;
+
+  function openWeek() {
+    const opts = d => DAY_TYPES.map(t =>
+      `<option value="${t.key}"${DB.week && dayType(d) === t.key ? ' selected' : ''}>${t.key === 'mix' ? 'Rest day (random mix)' : t.name}</option>`).join('');
+    const html = () => `<div class="sh-head"><div class="sh-eyebrow">Saved only on this device</div><h2>Your gym week</h2></div>
+      <div class="card set-list">${DAY_ORDER.map(d => `<label class="set week-row" style="--tint:${DB.week ? defByKey(dayType(d)).tint : 'transparent'}">
+        <b>${DAY_NAMES[d]}</b>
+        <div class="select">${DB.week ? '' : '<em>Choose</em>'}<select data-week="${d}" aria-label="${DAY_NAMES[d]}">${DB.week ? '' : '<option value="" selected disabled hidden></option>'}${opts(d)}</select>${ICON.chevR}</div>
+      </label>`).join('')}</div>
+      <p class="note">Your coming-home routine follows this week. Rest days get a random full-body mix. Your week is stored on this device, not on the website, so nobody else can see it. Set it once on each device you use.</p>
+      <div class="sh-foot"><button class="btn-start" data-act="sheet-close"><span>Done</span></button></div>`;
+    const entry = openSheet(html(), { cls: 'tall' });
+    entry.refresh = () => { $('.sheet-body', entry.root).innerHTML = html(); };
+    weekEntry = entry;
+  }
+  let weekEntry = null;
 
   // ───────────────────────── player
   let PL = null;
@@ -868,9 +889,9 @@
     const n = completed || !cur ? r.items.length : cur.i + (cur.type === 'hold' ? 1 : 0);
     if (completed || secs >= 30) {
       DB.log.push({ ts: Date.now(), day: dayKey(), key: r.key, name: r.title, secs, n, done: completed,
-        split: SPLIT_KEYS.includes(r.key) ? r.key : null });
+        split: DAY_KEYS.includes(r.key) ? r.key : null });
       if (r.key !== 'single') DB.recent[r.key] = r.items.map(it => it.id);
-      if (completed && SPLIT_KEYS.includes(r.key)) { UI.split = null; delete DB.plans[r.key]; }
+      if (completed && DAY_KEYS.includes(r.key)) { UI.day = null; delete DB.plans[r.key]; }
       save();
     }
     if (!completed) { closePlayer(); render(); if (secs >= 30) toast(`Saved ${fmtMin(secs)}`); return; }
@@ -931,7 +952,7 @@
   // ───────────────────────── actions
   const startKey = key => {
     const def = defByKey(key);
-    const minutes = SPLIT_KEYS.includes(key) ? DB.settings.minutes : key === 'body' ? DB.body.minutes : def.minutes;
+    const minutes = DAY_KEYS.includes(key) ? DB.settings.minutes : key === 'body' ? DB.body.minutes : def.minutes;
     startRoutine(key === 'body' ? build(def, minutes) : planFor(def, minutes));
   };
   const toggleBody = area => {
@@ -944,7 +965,8 @@
 
   const ACTIONS = {
     tab: el => go(el.dataset.tab),
-    split: el => { UI.split = el.dataset.key; haptic(); render(); },
+    day: el => { UI.day = Number(el.dataset.d); UI.dayStamp = dayKey(); haptic(); render(); },
+    week: () => openWeek(),
     len: el => { DB.settings.minutes = Number(el.dataset.v); save(); render(); },
     start: el => startKey(el.dataset.key),
     shuffle: el => {
@@ -956,7 +978,7 @@
     },
     preview: el => {
       const key = el.dataset.key, def = defByKey(key);
-      openPreview(planFor(def, SPLIT_KEYS.includes(key) ? DB.settings.minutes : def.minutes));
+      openPreview(planFor(def, DAY_KEYS.includes(key) ? DB.settings.minutes : def.minutes));
     },
     'hide-install': () => { DB.installHidden = true; save(); render(); },
     settings: () => openSettings(),
@@ -1025,6 +1047,16 @@
     if (!el || el.disabled) return;
     const fn = ACTIONS[el.dataset.act];
     if (fn) { e.preventDefault(); fn(el, e); }
+  });
+  document.addEventListener('change', e => {
+    const d = e.target.dataset && e.target.dataset.week;
+    if (d == null || !e.target.value) return;
+    if (!DB.week) DB.week = { 0: 'mix', 1: 'mix', 2: 'mix', 3: 'mix', 4: 'mix', 5: 'mix', 6: 'mix' };
+    DB.week[d] = e.target.value;
+    save(); haptic();
+    if (weekEntry) weekEntry.refresh();
+    if (settingsEntry && settingsEntry.root.isConnected) settingsEntry.refresh();
+    UI.day = null; render();
   });
   document.addEventListener('input', e => {
     if (e.target.id === 'lib-q') { UI.libQuery = e.target.value; $('#lib-grid').innerHTML = libGrid(); }

@@ -36,7 +36,10 @@ body {
   margin: 0; min-height: 100dvh; background: var(--bg); color: var(--text);
   font: 16px/1.4 var(--font); -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent; overscroll-behavior-y: none;
+  /* feel like an app: no text selection or long-press callouts while tapping and dragging */
+  -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
 }
+input, select, textarea { -webkit-user-select: auto; user-select: auto; }
 button {
   font: inherit; color: inherit; background: none; border: 0; padding: 0; margin: 0;
   cursor: pointer; touch-action: manipulation; -webkit-user-select: none; user-select: none;
@@ -103,21 +106,34 @@ h1, h2, h3, h4, p { margin: 0; }
 .seg button { height: 30px; min-width: 36px; padding: 0 10px; border-radius: 8px; font-size: 14px; font-weight: 600; color: var(--text-2); }
 .seg button.on { background: #636366; color: #fff; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3); }
 
-/* ───────────────── split chips + hero */
-.split-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 7px; }
-.split-chip {
-  height: 54px; border-radius: 15px; background: var(--surface); border: 1px solid var(--line);
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; color: var(--text-2);
+/* ───────────────── gym week strip + hero */
+.link { font-size: 15px; font-weight: 600; color: var(--accent); padding: 4px 2px; }
+.days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
+.day {
+  min-width: 0; height: 66px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: var(--text-2);
+  transition: transform 0.14s ease, background-color 0.2s ease;
 }
-.split-chip span { font-size: 15px; font-weight: 600; }
-.split-chip small { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--tint); min-height: 12px; }
-.split-chip.on {
-  color: var(--text); border-color: color-mix(in srgb, var(--tint) 55%, transparent);
-  background: color-mix(in srgb, var(--tint) 16%, var(--surface));
+.day:active { transform: scale(0.94); }
+.day span { font-size: 10.5px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-3); }
+.day b { font-size: 12.5px; font-weight: 650; color: var(--tint); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.day i { width: 14px; height: 14px; display: grid; place-items: center; color: var(--accent); }
+.day i .ic { width: 13px; height: 13px; }
+.day.now span { color: var(--text); }
+.day.now { box-shadow: inset 0 -3px 0 -1px var(--text-2); }
+.day.on { background: color-mix(in srgb, var(--tint) 18%, var(--surface)); border-color: color-mix(in srgb, var(--tint) 60%, transparent); }
+.day.on b { color: var(--text); }
+.setup {
+  width: 100%; display: flex; align-items: center; gap: 12px; text-align: left; margin-bottom: 10px; padding: 14px 14px 14px 16px;
+  border-radius: 18px; background: linear-gradient(135deg, rgba(124, 240, 197, 0.16), var(--surface) 75%); border: 1px solid rgba(124, 240, 197, 0.25);
 }
+.setup div { flex: 1; }
+.setup b { display: block; font-size: 16px; }
+.setup span { display: block; font-size: 13.5px; color: var(--text-2); margin-top: 2px; }
+.setup .ic { color: var(--accent); }
 
 .hero {
-  margin-top: 12px; padding: 18px; border-radius: 26px; position: relative; overflow: hidden;
+  margin-top: 10px; padding: 18px; border-radius: 26px; position: relative; overflow: hidden;
   background:
     radial-gradient(120% 90% at 100% 0%, color-mix(in srgb, var(--tint) 30%, transparent), transparent 60%),
     var(--surface);
@@ -186,15 +202,6 @@ h1, h2, h3, h4, p { margin: 0; }
 .bm-mini { padding: 6px 0; }
 .bm-mini .bm { height: 100%; width: auto; max-height: 100%; }
 
-/* ───────────────── week strip */
-.week { display: grid; grid-template-columns: repeat(7, 1fr); padding: 14px 8px; }
-.wk-day { display: flex; flex-direction: column; align-items: center; gap: 7px; }
-.wk-day span { font-size: 12px; font-weight: 600; color: var(--text-3); }
-.wk-day i { width: 32px; height: 32px; border-radius: 50%; background: var(--surface-2); display: grid; place-items: center; }
-.wk-day i .ic { width: 16px; height: 16px; }
-.wk-day.done i { background: var(--accent); color: var(--ink); }
-.wk-day.now span { color: var(--text); }
-.wk-day.now:not(.done) i { box-shadow: inset 0 0 0 2px rgba(124, 240, 197, 0.6); }
 
 /* ───────────────── body map */
 .bm-wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-top: 16px; padding: 18px 10px 10px; }
@@ -354,10 +361,20 @@ h1, h2, h3, h4, p { margin: 0; }
 .set + .set { border-top: 1px solid var(--line); }
 .set b { display: block; font-size: 15px; font-weight: 600; }
 .set span { display: block; font-size: 12.5px; color: var(--text-2); margin-top: 1px; }
-.split-order { padding: 14px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
-.split-order span { height: 28px; padding: 0 11px; border-radius: 14px; display: inline-flex; align-items: center; font-size: 14px; font-weight: 600; color: var(--tint); background: color-mix(in srgb, var(--tint) 14%, transparent); }
-.split-order i { font-style: normal; color: var(--text-3); }
-.split-order p { width: 100%; margin-top: 8px; font-size: 13px; color: var(--text-2); }
+.week-sum { padding: 12px; display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; }
+.week-sum span { font-size: 12.5px; font-weight: 650; color: var(--tint); }
+.week-sum em { display: block; font-style: normal; font-size: 10.5px; font-weight: 700; text-transform: uppercase; color: var(--text-3); margin-bottom: 2px; }
+.week-row { cursor: pointer; }
+.week-row b { flex: 1; display: flex; align-items: center; gap: 10px; }
+.week-row b::before { content: ''; width: 10px; height: 10px; border-radius: 50%; background: var(--tint); box-shadow: inset 0 0 0 1.5px var(--line); }
+.select { position: relative; display: flex; align-items: center; gap: 2px; }
+.select select {
+  -webkit-appearance: none; appearance: none; background: transparent; border: 0; outline: none; color: var(--text);
+  font: 16px var(--font); text-align: right; text-align-last: right; padding: 6px 2px; max-width: 200px; cursor: pointer;
+}
+.select em { position: absolute; right: 22px; font-style: normal; font-size: 16px; color: var(--accent); pointer-events: none; }
+.select .ic { width: 16px; height: 16px; transform: rotate(90deg); color: var(--text-3); }
+.note { font-size: 13.5px; line-height: 1.45; color: var(--text-2); margin: 12px 4px 0; }
 
 /* ───────────────── figures */
 .fg { --fig-hl: var(--tint, var(--accent)); }
