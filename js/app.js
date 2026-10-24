@@ -2,7 +2,7 @@
   'use strict';
 
   const { STRETCHES, AREAS, POS, POS_ORDER, byId } = window.LIB;
-  const VERSION = '2.2.0';
+  const VERSION = '2.2.1';
 
   // ───────────────────────── helpers
   const $ = (s, el = document) => el.querySelector(s);
@@ -940,7 +940,9 @@
     </div>`;
   }
 
+  let pendingReload = false;
   function closePlayer() {
+    if (pendingReload) { location.reload(); return; }
     const root = $('#player');
     if (PL) { cancelAnimationFrame(PL.raf); if (PL.fig) PL.fig.stop(); }
     PL = null;
@@ -1126,6 +1128,16 @@
   render();
   requestAnimationFrame(() => document.documentElement.classList.add('ready'));
   if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
-    window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+    // When a new version takes over, reload once so it shows right away
+    // (not mid-session, and not on the very first visit).
+    const hadController = !!navigator.serviceWorker.controller;
+    let reloading = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!hadController || reloading) return;
+      if (PL) { pendingReload = true; return; }
+      reloading = true; location.reload();
+    });
+    window.addEventListener('load', () => navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' })
+      .then(reg => reg.update()).catch(() => {}));
   }
 })();

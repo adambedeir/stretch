@@ -1,6 +1,8 @@
 /* Offline support. Network first (so updates show up right away), cache as fallback.
+ * Requests skip the browser's HTTP cache (GitHub Pages allows 10 minutes of reuse),
+ * so a new version shows up on the next open instead of up to 10 minutes later.
  * Bump VERSION when shipping changes so old caches get cleared. */
-const VERSION = 'stretch-v2.2.0';
+const VERSION = 'stretch-v2.2.1';
 const FILES = [
   './',
   './index.html',
@@ -16,7 +18,9 @@ const FILES = [
 ];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(VERSION).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(VERSION)
+    .then(c => c.addAll(FILES.map(u => new Request(u, { cache: 'reload' }))))
+    .then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', e => {
@@ -34,7 +38,11 @@ self.addEventListener('fetch', e => {
     const cache = await caches.open(VERSION);
     try {
       const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('slow')), 3000));
-      const res = await Promise.race([fetch(req), timeout]);
+      // Revalidate with the server every time (cheap: unchanged files come back as 304).
+      const fresh = req.mode === 'navigate'
+        ? fetch(req.url, { cache: 'no-cache', credentials: 'same-origin' })
+        : fetch(req, { cache: 'no-cache' });
+      const res = await Promise.race([fresh, timeout]);
       if (res && res.ok) cache.put(req, res.clone());
       return res;
     } catch (err) {
