@@ -2,7 +2,7 @@
  * Requests skip the browser's HTTP cache (GitHub Pages allows 10 minutes of reuse),
  * so a new version shows up on the next open instead of up to 10 minutes later.
  * Bump VERSION when shipping changes so old caches get cleared. */
-const VERSION = 'stretch-v2.2.1';
+const VERSION = 'stretch-v2.3.0';
 const FILES = [
   './',
   './index.html',

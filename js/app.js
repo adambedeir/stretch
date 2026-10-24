@@ -2,7 +2,7 @@
   'use strict';
 
   const { STRETCHES, AREAS, POS, POS_ORDER, byId } = window.LIB;
-  const VERSION = '2.2.1';
+  const VERSION = '2.3.0';
 
   // ───────────────────────── helpers
   const $ = (s, el = document) => el.querySelector(s);
@@ -124,7 +124,6 @@
   }
   const readyFor = def => def.ready || DB.settings.ready;
   const itemSecs = (it, ready) => ready + (it.sides ? it.hold * 2 + SWITCH_SECS : it.hold);
-  const routineSecs = r => r.items.reduce((t, it) => t + itemSecs(it, r.ready), 0);
 
   function build(def, minutes, extraAvoid) {
     const ready = readyFor(def);
@@ -274,7 +273,7 @@
   const seg = (act, cur, opts, extra = '') =>
     `<div class="seg" role="radiogroup" ${extra}>${opts.map(o =>
       `<button role="radio" aria-checked="${o.v === cur}" class="${o.v === cur ? 'on' : ''}" data-act="${act}" data-v="${o.v}">${o.l}</button>`).join('')}</div>`;
-  const LEN_OPTS = [{ v: 5, l: '5' }, { v: 10, l: '10' }, { v: 15, l: '15' }];
+  const LEN_OPTS = [{ v: 5, l: 'Quick' }, { v: 10, l: 'Balanced' }, { v: 15, l: 'Deep' }];
 
   let toastTimer = 0;
   function toast(msg) {
@@ -330,14 +329,10 @@
         ${setup}
         <div class="days">${strip}</div>
         <article class="hero" style="--tint:${def.tint}">
-          <div class="hero-top">
-            <div>
-              <div class="hero-eyebrow">${eyebrow}</div>
-              <h3>${title}</h3>
-              <div class="hero-meta">${fmtMin(routineSecs(plan))} · ${plan.items.length} stretches</div>
-            </div>
-            ${seg('len', DB.settings.minutes, LEN_OPTS, 'aria-label="Length in minutes"')}
-          </div>
+          <div class="hero-eyebrow">${eyebrow}</div>
+          <h3>${title}</h3>
+          <div class="hero-meta">${plan.items.length} stretches</div>
+          <div class="seg-wide">${seg('len', DB.settings.minutes, LEN_OPTS, 'aria-label="Session size"')}</div>
           <button class="hero-strip" data-act="preview" data-key="${def.key}" aria-label="See all stretches">
             ${shown.map(it => thumb(it.id)).join('')}${more > 0 ? `<div class="thumb more">+${more}</div>` : ''}
           </button>
@@ -353,11 +348,10 @@
         <div class="sec-h"><h2>Quick sessions</h2></div>
         <div class="quick-grid">
           ${QUICK.map(q => {
-            const p = planFor(q, q.minutes);
             return `<article class="quick" style="--tint:${q.tint}">
               <button class="quick-main" data-act="preview" data-key="${q.key}">
                 ${thumb(q.icon, 'lg', 20)}
-                <b>${q.name}</b><span>${fmtMin(routineSecs(p))} · ${esc(q.sub)}</span>
+                <b>${q.name}</b><span>${esc(q.sub)}</span>
               </button>
               <button class="quick-play" data-act="start" data-key="${q.key}" aria-label="Start ${q.name}">${ICON.play}</button>
             </article>`;
@@ -375,8 +369,6 @@
 
   function vBody() {
     const sel = new Set(DB.body.sel);
-    const def = bodyDef();
-    const plan = sel.size ? build(def, DB.body.minutes) : null;
     const count = STRETCHES.filter(s => WHERE[DB.body.where](s) && s.areas.some(a => sel.has(a))).length;
     return header('Body', 'Tap where you feel tight') + `
       <div class="where">${seg('body-where', DB.body.where, [{ v: 'any', l: 'Anywhere' }, { v: 'desk', l: 'At my desk' }, { v: 'floor', l: 'On the floor' }], 'aria-label="Where are you?"')}</div>
@@ -387,13 +379,11 @@
       <div class="chips wrap">${AREAS.map(a =>
         `<button class="chip${sel.has(a.key) ? ' on' : ''}" data-act="bm" data-area="${a.key}" aria-pressed="${sel.has(a.key)}">${a.name}</button>`).join('')}</div>
       <div class="cta-bar">
-        <div class="cta-top">
-          <div class="cta-meta">${sel.size ? `${sel.size} area${sel.size > 1 ? 's' : ''} · ${count} stretches` : 'Pick at least one area'}</div>
-          ${seg('body-len', DB.body.minutes, LEN_OPTS.map(o => ({ v: o.v, l: o.l + 'm' })), 'aria-label="Length in minutes"')}
-        </div>
+        <div class="cta-meta">${sel.size ? `${sel.size} area${sel.size > 1 ? 's' : ''} · ${count} stretches to pick from` : 'Pick at least one area'}</div>
+        <div class="seg-wide">${seg('body-len', DB.body.minutes, LEN_OPTS, 'aria-label="Session size"')}</div>
         <div class="cta-row">
           <button class="btn-ghost" data-act="body-preview" ${sel.size ? '' : 'disabled'}>Preview</button>
-          <button class="btn-start" data-act="body-start" ${sel.size ? '' : 'disabled'}>${ICON.play}<span>Start${plan ? ' · ' + fmtMin(routineSecs(plan)) : ''}</span></button>
+          <button class="btn-start" data-act="body-start" ${sel.size ? '' : 'disabled'}>${ICON.play}<span>Start</span></button>
         </div>
       </div>`;
   }
@@ -542,7 +532,7 @@
   let preview = null;
   function previewHTML(r) {
     return `<div class="sh-head">
-        <div class="sh-eyebrow">${r.items.length} stretches · ${fmtMin(routineSecs(r))}</div>
+        <div class="sh-eyebrow">${r.items.length} stretches</div>
         <h2>${esc(r.title)}</h2>
       </div>
       <ol class="rlist">${r.items.map((it, i) => {
@@ -590,7 +580,7 @@
       <div class="callout avoid"><b>Avoid</b><p>${esc(s.avoid)}</p></div>
       <div class="sh-foot">
         <button class="btn-round fav${fav ? ' on' : ''}" data-act="fav" data-id="${id}" aria-pressed="${fav}" aria-label="Favorite">${fav ? ICON.starFill : ICON.star}</button>
-        <button class="btn-start" data-act="start-one" data-id="${id}">${ICON.play}<span>Do this one · ${fmtClock(itemSecs(it, 0))}</span></button>
+        <button class="btn-start" data-act="start-one" data-id="${id}">${ICON.play}<span>Do this one</span></button>
       </div>`, {
       cls: 'tall detail',
       onOpen: root => { fig = Figure.mount($('.dt-fig', root), s, { animate: true }); },
@@ -602,7 +592,7 @@
     const st = DB.settings;
     const html = () => `<div class="sh-head"><div class="sh-eyebrow">Stretch ${VERSION}</div><h2>Settings</h2></div>
       <div class="set-list card">
-        <div class="set"><div><b>Coming-home length</b><span>Default minutes for your split routine</span></div>${seg('set-minutes', st.minutes, LEN_OPTS)}</div>
+        <div class="set stack"><div><b>Session size</b><span>How much your coming-home routine includes</span></div>${seg('set-minutes', st.minutes, LEN_OPTS)}</div>
         <div class="set"><div><b>Hold times</b><span>Applies to every stretch</span></div>${seg('set-hold', st.holdScale, [{ v: 0.75, l: 'Shorter' }, { v: 1, l: 'Normal' }, { v: 1.25, l: 'Longer' }])}</div>
         <div class="set"><div><b>Get-ready time</b><span>Before each stretch</span></div>${seg('set-ready', st.ready, [{ v: 3, l: '3s' }, { v: 5, l: '5s' }, { v: 8, l: '8s' }])}</div>
         <div class="set"><div><b>Chimes</b><span>Plays through the ringer. Silent mode mutes them.</span></div>${seg('set-sound', st.sound, [{ v: true, l: 'On' }, { v: false, l: 'Off' }])}</div>
@@ -712,7 +702,7 @@
         <button class="icon-btn" data-act="pl-close" aria-label="End session">${ICON.close}</button>
         <div class="pl-progress">
           <div class="pl-segs">${r.items.map(() => '<i><b></b></i>').join('')}</div>
-          <div class="pl-meta"><span class="pl-count"></span><span class="pl-left"></span></div>
+          <div class="pl-meta"><span class="pl-count"></span></div>
         </div>
         <button class="icon-btn" data-act="pl-list" aria-label="See all stretches">${ICON.list}</button>
       </header>
@@ -837,9 +827,6 @@
       PL.lastSec = sec;
       $('.pl-time', root).textContent = st.type === 'hold' ? fmtClock(sec) : String(sec);
       if (!PL.paused && sec > 0 && sec <= 3 && st.type !== 'switch') Sound.play('tick');
-      let rest = left / 1000;
-      for (let k = PL.k + 1; k < PL.steps.length; k++) rest += PL.steps[k].dur;
-      $('.pl-left', root).textContent = `${fmtClock(Math.ceil(rest))} left`;
     }
     // segment bars
     const steps = PL.steps;
