@@ -2,7 +2,7 @@
   'use strict';
 
   const { STRETCHES, AREAS, POS, POS_ORDER, byId } = window.LIB;
-  const VERSION = '2.1.0';
+  const VERSION = '2.2.0';
 
   // ───────────────────────── helpers
   const $ = (s, el = document) => el.querySelector(s);
@@ -30,7 +30,6 @@
     settings: { minutes: 10, holdScale: 1, ready: 5, sound: true, haptics: true },
     body: { sel: [], minutes: 10, where: 'any' },
     week: null, // { 0..6 (Sun..Sat): routine key } — kept on this device only
-    installHidden: false,
   };
   function load() {
     try {
@@ -288,8 +287,6 @@
   // ───────────────────────── views
   const UI = { tab: 'today', day: null, dayStamp: null, libFilter: 'all', libQuery: '', calOffset: 0, scroll: {} };
 
-  const isIOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-  const standalone = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
 
   function header(title, sub, right = '') {
     return `<header class="lt"><div class="lt-row"><div><div class="lt-eyebrow">${sub}</div><h1>${title}</h1></div><div class="lt-actions">${right}</div></div></header>`;
@@ -312,10 +309,6 @@
     const shown = plan.items.slice(0, 6);
     const more = plan.items.length - shown.length;
 
-    let install = '';
-    if (isIOS && !standalone && !DB.installHidden) {
-      install = `<div class="banner"><div class="banner-ic">${ICON.share}</div><div><b>Install on your iPhone</b><span>Tap Share, then “Add to Home Screen” for a full-screen app that works offline.</span></div><button class="icon-btn sm" data-act="hide-install" aria-label="Dismiss">${ICON.close}</button></div>`;
-    }
 
     const ws = weekStart();
     const days = daysSet();
@@ -331,7 +324,7 @@
     const setup = DB.week ? '' : `<button class="setup" data-act="week">
         <div><b>Set up your gym week</b><span>Pick what you train each day and the matching stretch routine will be waiting when you get home.</span></div>${ICON.chevR}</button>`;
 
-    return header('Today', esc(date), right) + install + `
+    return header('Today', esc(date), right) + `
       <section class="sec">
         <div class="sec-h"><h2>Coming home</h2><button class="link" data-act="week">${DB.week ? 'Edit week' : 'Set up'}</button></div>
         ${setup}
@@ -622,6 +615,8 @@
       }).join('')}</div>
       <div class="sec-h"><h2>Data</h2></div>
       <div class="card set-list">
+        <div class="set"><div><b>Move your data</b><span>Copy your week, history and favorites here, then paste them into Stretch on another device or browser.</span></div>
+        <div class="btn-pair"><button class="btn-small" data-act="data-copy">Copy</button><button class="btn-small" data-act="data-paste">Paste</button></div></div>
         <div class="set"><div><b>History</b><span>${DB.log.length} sessions, saved only on this device</span></div>
         <button class="btn-danger" data-act="reset">Reset</button></div>
       </div>`;
@@ -646,6 +641,40 @@
     weekEntry = entry;
   }
   let weekEntry = null;
+
+  // ───────────────────────── moving data between browsers / devices
+  const DATA_TAG = 'STRETCH1:';
+  function exportCode() {
+    const d = { log: DB.log, favs: DB.favs, week: DB.week, settings: DB.settings, body: DB.body, recent: DB.recent };
+    return DATA_TAG + btoa(unescape(encodeURIComponent(JSON.stringify(d))));
+  }
+  function importCode(text) {
+    const m = new RegExp(DATA_TAG + '([A-Za-z0-9+/=]+)').exec(String(text || '').replace(/\s+/g, ''));
+    let d = null;
+    try { d = m && JSON.parse(decodeURIComponent(escape(atob(m[1])))); } catch (e) { d = null; }
+    if (!d || typeof d !== 'object') { toast("That doesn't look like copied Stretch data."); return false; }
+    const seen = new Set(DB.log.map(l => l.ts));
+    const added = (Array.isArray(d.log) ? d.log : []).filter(l => l && l.ts && l.day && !seen.has(l.ts));
+    DB.log = DB.log.concat(added).sort((a, b) => a.ts - b.ts);
+    DB.favs = [...new Set([...DB.favs, ...(Array.isArray(d.favs) ? d.favs : [])])].filter(id => byId[id]);
+    if (d.week && typeof d.week === 'object') DB.week = d.week;
+    if (d.settings) DB.settings = Object.assign({}, DB.settings, d.settings);
+    if (d.body) DB.body = Object.assign({}, DB.body, d.body);
+    if (d.recent) DB.recent = Object.assign({}, d.recent, DB.recent);
+    DB.plans = {};
+    save(); render();
+    if (settingsEntry && settingsEntry.root.isConnected) settingsEntry.refresh();
+    toast(added.length ? `Added ${added.length} session${added.length > 1 ? 's' : ''} and your week` : 'Your week and settings are in. No new sessions to add.');
+    return true;
+  }
+  function openPasteSheet() {
+    const entry = openSheet(`<div class="sh-head"><div class="sh-eyebrow">Move your data</div><h2>Paste your data</h2></div>
+      <p class="note">On the other device or browser, open Settings and tap Copy. Then paste here.</p>
+      <textarea id="data-in" class="paste" rows="5" placeholder="STRETCH1:…" autocomplete="off" autocapitalize="off" spellcheck="false"></textarea>
+      <div class="sh-foot"><button class="btn-start" data-act="data-import"><span>Add my data</span></button></div>`);
+    pasteEntry = entry;
+  }
+  let pasteEntry = null;
 
   // ───────────────────────── player
   let PL = null;
@@ -980,7 +1009,6 @@
       const key = el.dataset.key, def = defByKey(key);
       openPreview(planFor(def, DAY_KEYS.includes(key) ? DB.settings.minutes : def.minutes));
     },
-    'hide-install': () => { DB.installHidden = true; save(); render(); },
     settings: () => openSettings(),
 
     bm: el => toggleBody(el.dataset.area),
@@ -1020,6 +1048,20 @@
     'set-ready': el => { DB.settings.ready = Number(el.dataset.v); DB.plans = {}; save(); settingsEntry.refresh(); render(); },
     'set-sound': el => { DB.settings.sound = el.dataset.v === 'true'; save(); settingsEntry.refresh(); if (DB.settings.sound) { Sound.unlock(); Sound.play('go'); } },
     'set-haptics': el => { DB.settings.haptics = el.dataset.v === 'true'; save(); settingsEntry.refresh(); haptic(); },
+    'data-copy': async () => {
+      const code = exportCode();
+      try { await navigator.clipboard.writeText(code); toast('Copied. Now open Stretch where you want it and tap Paste.'); }
+      catch (e) {
+        openSheet(`<div class="sh-head"><div class="sh-eyebrow">Move your data</div><h2>Copy this</h2></div>
+          <p class="note">Select all of it and copy, then paste it into Stretch on the other device or browser.</p>
+          <textarea class="paste" rows="6" readonly>${code}</textarea>`);
+      }
+    },
+    'data-paste': async () => {
+      try { const t = await navigator.clipboard.readText(); if (t && t.includes(DATA_TAG)) { importCode(t); return; } } catch (e) { /* no clipboard access */ }
+      openPasteSheet();
+    },
+    'data-import': () => { if (importCode($('#data-in') && $('#data-in').value) && pasteEntry) closeSheet(pasteEntry); },
     reset: el => {
       if (el.dataset.armed) { DB.log = []; DB.recent = {}; DB.plans = {}; save(); settingsEntry.refresh(); render(); toast('History cleared'); return; }
       el.dataset.armed = '1'; el.textContent = 'Tap again to erase';
@@ -1079,6 +1121,8 @@
   });
 
   // ───────────────────────── boot
+  if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+  document.addEventListener('gesturestart', e => e.preventDefault()); // Safari pinch-zoom
   render();
   requestAnimationFrame(() => document.documentElement.classList.add('ready'));
   if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {

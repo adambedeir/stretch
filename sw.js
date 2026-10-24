@@ -1,6 +1,6 @@
 /* Offline support. Network first (so updates show up right away), cache as fallback.
  * Bump VERSION when shipping changes so old caches get cleared. */
-const VERSION = 'stretch-v2.1.0';
+const VERSION = 'stretch-v2.2.0';
 const FILES = [
   './',
   './index.html',

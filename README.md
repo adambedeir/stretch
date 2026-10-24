@@ -10,13 +10,17 @@ A calm, guided stretching app for iPhone and desktop. No build step and no accou
 
 Everything personal (your week, history, favorites, settings) is stored only in the browser on each device. Nothing is sent anywhere, and none of it is in this repo.
 
-## Install on iPhone
+## Using it on iPhone
 
-1. Open the site in **Safari**.
-2. Tap **Share** → **Add to Home Screen**.
-3. Launch it from the home screen icon. It runs full screen and works offline.
+Just open the link in Safari. It's the full app there, and a Shortcut with **Open URLs** works fine.
 
-On desktop, open the same link in any browser. In Chrome or Edge you can also choose **Install** from the address bar to get it as its own window.
+For a Home Screen icon too, tap **Share** → **Add to Home Screen** and turn **Open as Web App** off. The icon then opens in Safari and shares the same data as your Shortcut. (A web-app icon keeps its own separate data on iOS.)
+
+Safari can clear a site's saved data if you don't open it for about a week, so use **Settings → Move your data → Copy** now and then if you want a backup.
+
+## Moving your data
+
+Settings → **Move your data** → **Copy** on one device or browser, then **Paste** on the other. It adds your sessions, week, favorites and settings, and skips sessions it already has. Copy on a Mac and paste on an iPhone works directly through Apple's Universal Clipboard.
 
 ## Run locally
 

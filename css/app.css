@@ -30,7 +30,7 @@
 
 /* ───────────────── base */
 *, *::before, *::after { box-sizing: border-box; }
-html { -webkit-text-size-adjust: 100%; background: var(--bg); }
+html { -webkit-text-size-adjust: 100%; background: var(--bg); touch-action: manipulation; }
 html.sheet-open body, html.playing body { overflow: hidden; }
 body {
   margin: 0; min-height: 100dvh; background: var(--bg); color: var(--text);
@@ -91,15 +91,6 @@ h1, h2, h3, h4, p { margin: 0; }
 .card { background: var(--surface); border-radius: 20px; border: 1px solid var(--line); }
 .empty { padding: 28px 20px; text-align: center; color: var(--text-3); font-size: 15px; }
 
-.banner {
-  display: flex; gap: 12px; align-items: flex-start; margin-top: 18px; padding: 14px;
-  border-radius: 18px; background: linear-gradient(135deg, rgba(124, 240, 197, 0.14), var(--surface) 70%);
-  border: 1px solid rgba(124, 240, 197, 0.18);
-}
-.banner > div:nth-child(2) { flex: 1; }
-.banner b { display: block; font-size: 15px; }
-.banner span { display: block; font-size: 13.5px; color: var(--text-2); margin-top: 2px; }
-.banner-ic { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background: rgba(124, 240, 197, 0.16); color: var(--accent); flex: none; }
 
 /* ───────────────── segmented control */
 .seg { display: inline-flex; padding: 2px; border-radius: 10px; background: rgba(118, 118, 128, 0.24); flex: none; }
@@ -184,6 +175,12 @@ h1, h2, h3, h4, p { margin: 0; }
   background: rgba(255, 255, 255, 0.08); color: var(--text); font-size: 16px; font-weight: 600;
 }
 .btn-ghost .ic { width: 18px; height: 18px; }
+.btn-pair { display: flex; gap: 6px; flex: none; }
+.btn-small { height: 34px; padding: 0 14px; border-radius: 10px; background: rgba(255, 255, 255, 0.1); color: var(--text); font-size: 14px; font-weight: 600; }
+.paste {
+  width: 100%; margin-top: 12px; padding: 12px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface-2);
+  color: var(--text); font: 15px/1.4 ui-monospace, Menlo, monospace; resize: none; word-break: break-all;
+}
 .btn-danger { height: 34px; padding: 0 14px; border-radius: 10px; background: rgba(255, 107, 107, 0.14); color: var(--danger); font-size: 14px; font-weight: 600; flex: none; }
 
 /* ───────────────── quick sessions */
